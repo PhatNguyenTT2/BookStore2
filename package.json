@@ -27,6 +27,6 @@
     "express": "^5.1.0",
     "nodemon": "^3.1.10",
     "vite": "^6.2.4",
-    "vite-plugin-vue-devtools": "^7.7.2"
+    "vite-plugin-vue-devtools": "^7.7.7"
   }
 }
