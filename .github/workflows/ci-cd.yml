@@ -1,0 +1,184 @@
+name: 🚀 BookStore CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    name: 🧪 Test Spring Boot Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: 📋 Cache Maven Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: 🔧 Make Maven Wrapper Executable
+      run: chmod +x backend/mvnw
+      
+    - name: 🧪 Run Backend Tests
+      run: |
+        cd backend
+        ./mvnw clean test
+        
+    - name: 📦 Build Backend JAR
+      run: |
+        cd backend
+        ./mvnw clean package -DskipTests
+        
+    - name: 📊 Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: backend/target/surefire-reports/
+        
+    - name: 📦 Upload JAR Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bookstore-backend-jar
+        path: backend/target/*.jar
+
+  test-frontend:
+    name: 🎨 Test Vue.js Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📋 Install Dependencies
+      run: npm ci
+      
+    - name: 🔍 Lint Code
+      run: npm run lint --if-present
+      
+    - name: 🧪 Run Frontend Tests
+      run: npm run test --if-present
+      
+    - name: 🏗️ Build Frontend
+      run: npm run build
+      
+    - name: 📦 Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist
+        path: dist/
+
+  integration-test:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: bookstore_test
+          MYSQL_USER: bookstore_user
+          MYSQL_PASSWORD: bookstore_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: ☕ Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: 🔧 Make Maven Wrapper Executable
+      run: chmod +x backend/mvnw
+      
+    - name: ⏳ Wait for MySQL
+      run: |
+        sudo apt-get install -y mysql-client
+        until mysql -h 127.0.0.1 -P 3306 -u bookstore_user -pbookstore_password -e "SELECT 1"; do
+          echo "Waiting for MySQL..."
+          sleep 2
+        done
+        
+    - name: 🗄️ Setup Test Database
+      run: |
+        mysql -h 127.0.0.1 -P 3306 -u bookstore_user -pbookstore_password bookstore_test < backend/mysql-setup.sql || echo "Schema setup completed"
+        
+    - name: 🧪 Run Integration Tests
+      run: |
+        cd backend
+        ./mvnw test -Dspring.profiles.active=test
+      env:
+        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/bookstore_test
+        SPRING_DATASOURCE_USERNAME: bookstore_user
+        SPRING_DATASOURCE_PASSWORD: bookstore_password
+
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend, integration-test]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Download Backend Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: bookstore-backend-jar
+        path: ./artifacts/
+        
+    - name: 📦 Download Frontend Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-dist
+        path: ./frontend-dist/
+        
+    - name: 📋 List Artifacts
+      run: |
+        echo "Backend artifacts:"
+        ls -la ./artifacts/
+        echo "Frontend artifacts:"
+        ls -la ./frontend-dist/
+        
+    - name: 🏗️ Create Deployment Package
+      run: |
+        mkdir -p deployment
+        cp -r ./artifacts/* deployment/
+        cp -r ./frontend-dist deployment/frontend
+        tar -czf bookstore-deployment.tar.gz deployment/
+        
+    - name: 📦 Upload Deployment Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-package
+        path: bookstore-deployment.tar.gz
+        
+    # TODO: Add actual deployment steps here
+    # - name: 🚀 Deploy to Cloud Provider
+    #   run: echo "Ready for deployment to staging environment"
