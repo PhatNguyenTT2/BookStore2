@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/bookstore")
+@RequestMapping("/api")
 @Slf4j
 public class HealthController {
 

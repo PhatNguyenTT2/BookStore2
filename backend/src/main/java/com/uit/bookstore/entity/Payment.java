@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -13,21 +14,29 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-public class Branch {
+@Table(name = "payment")
+public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
     @Column(nullable = false)
-    String name;
+    String type; // FINE, DEPOSIT, MEMBERSHIP
 
-    String address;
-    String phone;
-    String email;
-    String manager;
+    @Column(nullable = false)
+    BigDecimal amount;
+
+    @Column(nullable = false)
+    String status; // PENDING, COMPLETED, CANCELLED, REFUNDED
+
+    String description;
+    String userId;
+    String transactionId;
+    String paymentMethod; // CASH, CARD, ONLINE
     
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    LocalDateTime completedAt;
 
     @PrePersist
     protected void onCreate() {

@@ -10,17 +10,19 @@ import java.util.List;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, String> {
+    boolean existsByIsbn(String isbn);
+    List<Book> findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(String title, String author);
+    List<Book> findByCategoryIgnoreCase(String category);
     List<Book> findByTitleContainingIgnoreCase(String title);
     List<Book> findByAuthorContainingIgnoreCase(String author);
-    List<Book> findByCategory(String category);
     
     @Query("SELECT DISTINCT b.category FROM Book b WHERE b.category IS NOT NULL")
     List<String> findAllCategories();
     
     @Query("SELECT b FROM Book b WHERE " +
-           "(:title IS NULL OR b.title LIKE %:title%) AND " +
-           "(:author IS NULL OR b.author LIKE %:author%) AND " +
-           "(:category IS NULL OR b.category = :category)")
+           "(:title IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
+           "(:author IS NULL OR LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))) AND " +
+           "(:category IS NULL OR LOWER(b.category) = LOWER(:category))")
     List<Book> findBooksWithFilters(@Param("title") String title, 
                                    @Param("author") String author, 
                                    @Param("category") String category);

@@ -45,3 +45,27 @@ backend/out/
 *.temp
 
 *.tsbuildinfo
+
+# Additional items for BookStore project
+# Maven
+apache-maven-*/
+*.zip
+backend/apache-maven-*/
+backend/*.zip
+backend/mvnw.cmd
+backend/install-maven.bat
+
+# MySQL
+mysql/
+*.sql
+
+# Test scripts
+test-*.ps1
+test-*.bat
+test-*.sh
+
+# Java compiled
+*.jar
+*.war
+*.ear
+*.class

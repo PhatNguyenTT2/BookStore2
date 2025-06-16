@@ -65,12 +65,12 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/bookstore/auth/**").permitAll()
-                .requestMatchers("/bookstore/users").permitAll() // Allow user registration
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/users").permitAll() // Allow user registration
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/bookstore/health").permitAll()
+                .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/books", "/api/books/*", "/api/books/search/**", "/api/books/category/**").permitAll() // Allow public book browsing
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
