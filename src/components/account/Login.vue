@@ -15,15 +15,15 @@ const currentMode = ref('signin')
 
 // Form data
 const signInData = ref({ username: '', password: '' })
-const signUpData = ref({ 
-  firstName: '', lastName: '', username: '', 
-  password: '', contact: '', email: '' 
+const signUpData = ref({
+  firstName: '', lastName: '', username: '',
+  password: '', contact: '', email: ''
 })
 const forgotData = ref({ username: '' })
 const otpData = ref({ otp: '' })
-const resetData = ref({ 
-  newPassword: '', 
-  confirmPassword: '' 
+const resetData = ref({
+  newPassword: '',
+  confirmPassword: ''
 })
 const error = ref(null)
 const loading = ref(false)
@@ -38,43 +38,60 @@ const switchToResetPassword = () => currentMode.value = 'reset'
 // Form handlers
 const handleSignIn = async (data) => {
   console.log('Starting login with data:', data) // Debug log
-  
+
   try {
     loading.value = true
     error.value = null
-    
+
+    // QUICK OFFLINE CHECK: Nếu là admin/admin123, skip API call
+    if (data.username === 'admin' && data.password === 'admin123') {
+      console.log('Using direct offline demo mode')
+      localStorage.setItem('token', 'demo-offline-token')
+      setTimeout(() => {
+        router.push('/books')
+        loading.value = false
+      }, 100) // Delay nhỏ để UI smooth
+      return
+    }
+
     console.log('Sending request to:', 'http://localhost:8080/bookstore/auth/token') // Debug log
-    
+
+    // Tạo axios instance với timeout ngắn
     const response = await axios.post('http://localhost:8080/bookstore/auth/token', {
       username: data.username,
       password: data.password
+    }, {
+      timeout: 2000, // Giảm xuống 2 giây timeout
+      headers: {
+        'Content-Type': 'application/json'
+      }
     })
-    
+
     console.log('Response received:', response.data) // Debug log
-    
+
     if (response.data.code === 1000 && response.data.result.authenticated) {
       // Lưu token vào localStorage
       localStorage.setItem('token', response.data.result.token)
       console.log('Token saved, redirecting to dashboard') // Debug log
-      
-      // Chuyển hướng đến dashboard
-      router.push('/dashboard')
-      
+
+      // Chuyển hướng đến books page
+      router.push('/books')
+
     } else {
       console.log('Authentication failed:', response.data) // Debug log
       error.value = 'Sai tên đăng nhập hoặc mật khẩu'
       alert('Sai tên đăng nhập hoặc mật khẩu')
     }
-    
+
   } catch (e) {
     console.error('Login error:', e) // Debug log
     console.error('Error response:', e.response) // Debug log để xem full response
     console.error('Error status:', e.response?.status) // Debug status code
-    
+
     // Kiểm tra nếu có response từ server (lỗi 4xx, 5xx)
     if (e.response) {
       console.log('Server responded with error:', e.response.data) // Debug log
-      
+
       // Xử lý theo error code từ backend
       if (e.response.data?.code) {
         switch (e.response.data.code) {
@@ -113,8 +130,17 @@ const handleSignIn = async (data) => {
     } else if (e.request) {
       // Request được gửi nhưng không có response (lỗi network thật)
       console.error('No response received:', e.request)
-      error.value = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.'
-      alert('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.')
+
+      // OFFLINE MODE: Allow demo login when server is down
+      if (data.username === 'admin' && data.password === 'admin123') {
+        console.log('Using offline demo mode')
+        localStorage.setItem('token', 'demo-offline-token')
+        router.push('/books')
+        return
+      }
+
+      error.value = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại. (Hoặc dùng admin/admin123 cho demo offline)'
+      alert('Lỗi kết nối mạng. Thử demo: admin/admin123')
     } else {
       // other
       console.error('Request setup error:', e.message)
@@ -128,32 +154,32 @@ const handleSignIn = async (data) => {
 
 const handleSignUp = async (data) => {
   console.log('Starting registration with data:', data) // Debug log
-  
+
   try {
     loading.value = true
     error.value = null
-    
+
     // Validate required fields
     if (!data.firstName || !data.lastName || !data.username || !data.password || !data.email) {
       error.value = 'Vui lòng điền đầy đủ thông tin bắt buộc'
       alert('Vui lòng điền đầy đủ thông tin bắt buộc')
       return
     }
-    
+
     // Validate username length (min 4 characters)
     if (data.username.length < 4) {
       error.value = 'Tên đăng nhập phải có ít nhất 4 ký tự'
       alert('Tên đăng nhập phải có ít nhất 4 ký tự')
       return
     }
-    
+
     // Validate password length (min 8 characters)
     if (data.password.length < 8) {
       error.value = 'Mật khẩu phải có ít nhất 8 ký tự'
       alert('Mật khẩu phải có ít nhất 8 ký tự')
       return
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(data.email)) {
@@ -161,9 +187,9 @@ const handleSignUp = async (data) => {
       alert('Email không hợp lệ')
       return
     }
-    
+
     console.log('Sending registration request to:', 'http://localhost:8080/bookstore/users') // Debug log
-    
+
     const response = await axios.post('http://localhost:8080/bookstore/users', {
       username: data.username,
       password: data.password,
@@ -173,37 +199,37 @@ const handleSignUp = async (data) => {
       phone: data.contact || null, // contact field maps to phone
       dob: null // You can add date of birth field later if needed
     })
-    
+
     console.log('Registration response received:', response.data) // Debug log
-    
+
     if (response.data.code === 1000 && response.data.result) {
       console.log('Registration successful:', response.data.result) // Debug log
-      
+
       // Clear form data
-      signUpData.value = { 
-        firstName: '', lastName: '', username: '', 
-        password: '', contact: '', email: '' 
+      signUpData.value = {
+        firstName: '', lastName: '', username: '',
+        password: '', contact: '', email: ''
       }
-      
+
       // Show success message and switch to sign in
       alert('Đăng ký thành công! Vui lòng đăng nhập.')
       switchToSignIn()
-      
+
     } else {
       console.log('Registration failed:', response.data) // Debug log
       error.value = 'Đăng ký thất bại. Vui lòng thử lại.'
       alert('Đăng ký thất bại. Vui lòng thử lại.')
     }
-    
+
   } catch (e) {
     console.error('Registration error:', e) // Debug log
     console.error('Error response:', e.response) // Debug log để xem full response
     console.error('Error status:', e.response?.status) // Debug status code
-    
+
     // Kiểm tra nếu có response từ server (lỗi 4xx, 5xx)
     if (e.response) {
       console.log('Server responded with error:', e.response.data) // Debug log
-      
+
       // Xử lý theo error code từ backend
       if (e.response.data?.code) {
         switch (e.response.data.code) {
@@ -308,14 +334,14 @@ const overlayConfig = computed(() => {
       }
     case 'forgot':
       return {
-        rightAction: switchToSignIn, 
+        rightAction: switchToSignIn,
         rightMultilineText: false,
         leftTitle: '"Your premier digital library for borrowing and reading books"',
         leftButtonText: null,
         leftAction: null,
         leftMultiline: true
       }
-    case 'otp': 
+    case 'otp':
       return {
         rightTitle: '"Your premier digital library for borrowing and reading books"',
         rightButtonText: null,
@@ -347,86 +373,57 @@ const overlayConfig = computed(() => {
     </section>
 
     <!-- Main Container -->
-    <div class="container" :class="{ 
+    <div class="container" :class="{
       'right-panel-active': currentMode === 'signup',
       'forgot-mode': currentMode === 'forgot',
       'otp-mode': currentMode === 'otp',
       'reset-mode': currentMode === 'reset'
     }">
-      
+
       <!-- Sign Up Form Container -->
       <div class="form-container sign-up-container">
-        <SignUpForm 
-          v-model:firstName="signUpData.firstName"
-          v-model:lastName="signUpData.lastName"
-          v-model:username="signUpData.username"
-          v-model:password="signUpData.password"
-          v-model:contact="signUpData.contact"
-          v-model:email="signUpData.email"
-          @submit="handleSignUp"
-        />
+        <SignUpForm v-model:firstName="signUpData.firstName" v-model:lastName="signUpData.lastName"
+          v-model:username="signUpData.username" v-model:password="signUpData.password"
+          v-model:contact="signUpData.contact" v-model:email="signUpData.email" @submit="handleSignUp" />
       </div>
 
       <!-- Sign In Form Container -->
       <div class="form-container sign-in-container">
-        <SignInForm 
-          v-model:username="signInData.username"
-          v-model:password="signInData.password"
-          @submit="handleSignIn"
-          @forgot-password="switchToForgotPassword"
-        />
+        <SignInForm v-model:username="signInData.username" v-model:password="signInData.password" @submit="handleSignIn"
+          @forgot-password="switchToForgotPassword" />
       </div>
 
       <!-- Forgot Password Form Container -->
       <div class="form-container forgot-container">
-        <ForgotPasswordForm 
-          v-model:username="forgotData.username"
-          @submit="handleForgotPassword"
-          @back="switchToSignIn"
-        />
+        <ForgotPasswordForm v-model:username="forgotData.username" @submit="handleForgotPassword"
+          @back="switchToSignIn" />
       </div>
 
       <!-- OTP Form Container -->
       <div class="form-container otp-container">
-        <OTPForm 
-          v-model:otp="otpData.otp"
-          @submit="handleOTP"
-          @back="switchToForgotPassword"
-        />
+        <OTPForm v-model:otp="otpData.otp" @submit="handleOTP" @back="switchToForgotPassword" />
       </div>
 
       <!-- Reset Password Form Container -->
       <div class="form-container reset-container">
-        <ResetPasswordForm 
-          v-model:newPassword="resetData.newPassword"
-          v-model:confirmPassword="resetData.confirmPassword"
-          @submit="handleResetPassword"
-          @back="switchToOTP"
-        />
+        <ResetPasswordForm v-model:newPassword="resetData.newPassword"
+          v-model:confirmPassword="resetData.confirmPassword" @submit="handleResetPassword" @back="switchToOTP" />
       </div>
 
       <!-- Overlay Container -->
       <div class="overlay-container">
         <div class="overlay">
-          
+
           <!-- Left Overlay Panel -->
           <div class="overlay-panel overlay-left">
-            <FlexibleLeftOverlay 
-              :title="overlayConfig.leftTitle"
-              :button-text="overlayConfig.leftButtonText"
-              :use-multiline-text="overlayConfig.leftMultiline"
-              @action="overlayConfig.leftAction"
-            />
+            <FlexibleLeftOverlay :title="overlayConfig.leftTitle" :button-text="overlayConfig.leftButtonText"
+              :use-multiline-text="overlayConfig.leftMultiline" @action="overlayConfig.leftAction" />
           </div>
 
           <!-- Right Overlay Panel -->
           <div class="overlay-panel overlay-right">
-            <FlexibleRightOverlay 
-              :title="overlayConfig.rightTitle"
-              :button-text="overlayConfig.rightButtonText"
-              :use-multiline-text="overlayConfig.rightMultilineText"
-              @action="overlayConfig.rightAction"
-            />
+            <FlexibleRightOverlay :title="overlayConfig.rightTitle" :button-text="overlayConfig.rightButtonText"
+              :use-multiline-text="overlayConfig.rightMultilineText" @action="overlayConfig.rightAction" />
           </div>
 
         </div>
@@ -524,6 +521,7 @@ const overlayConfig = computed(() => {
   opacity: 0;
   z-index: 1;
 }
+
 /* ==================== DOUBLE SLIDER ANIMATIONS ==================== */
 
 /* -------------------- SIGN UP MODE -------------------- */
@@ -559,7 +557,7 @@ const overlayConfig = computed(() => {
 }
 
 .container.otp-mode .otp-container {
-  transform: translateX(0); 
+  transform: translateX(0);
   opacity: 1;
   z-index: 5;
   animation: show 0.6s;
@@ -618,12 +616,12 @@ const overlayConfig = computed(() => {
 }
 
 .container.otp-mode .overlay-container {
-  transform: translateX(0); 
+  transform: translateX(0);
 }
 
 /* -------------------- OVERLAY BACKGROUND -------------------- */
 .overlay {
-  background: var(--vt-c-second-bg-color); 
+  background: var(--vt-c-second-bg-color);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;
@@ -684,12 +682,14 @@ const overlayConfig = computed(() => {
 
 /* OTP mode: chỉ hiển thị right overlay */
 .container.otp-mode .overlay-left {
-  opacity: 0; /* Ẩn left overlay */
+  opacity: 0;
+  /* Ẩn left overlay */
   transform: translateX(-100%);
 }
 
 .container.otp-mode .overlay-right {
-  transform: translateX(0); /* Hiển thị right overlay */
+  transform: translateX(0);
+  /* Hiển thị right overlay */
 }
 
 /* -------------------- OVERLAY BORDER RADIUS FIX -------------------- */
@@ -702,11 +702,15 @@ const overlayConfig = computed(() => {
 
 /* ==================== ANIMATIONS ==================== */
 @keyframes show {
-  0%, 49.99% {
+
+  0%,
+  49.99% {
     opacity: 0;
     z-index: 1;
   }
-  50%, 100% {
+
+  50%,
+  100% {
     opacity: 1;
     z-index: 5;
   }
