@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useBook } from '@/data/book' 
 
 import TitleText from './texts/TitleText.vue'
@@ -13,6 +13,11 @@ import ButtonCRUD from './buttons/ButtonCRUD.vue'
 import ButtonText from './texts/ButtonText.vue'
 
 const book = useBook()
+
+// Fetch books when component mounts
+onMounted(() => {
+  book.fetchBooks()
+})
 
 const searchQuery = ref('')
 const filteredBooks = computed(() => {

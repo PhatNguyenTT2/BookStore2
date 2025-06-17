@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUser } from '@/data/user'
 
 import TitleText from './texts/TitleText.vue'
@@ -13,6 +13,11 @@ import ButtonCRUD from './buttons/ButtonCRUD.vue'
 import ButtonText from './texts/ButtonText.vue'
 
 const userStore = useUser()
+
+// Fetch users when component mounts
+onMounted(() => {
+  userStore.fetchUsers()
+})
 const searchQuery = ref('')
 
 const selectedUser = ref(null)
@@ -56,9 +61,8 @@ const cancelCancelEdit = () => cancelEditDialog.value = false
         <div class="right">
           <SearchFrame v-model="searchQuery" />
         </div>
-      </div>
-
-      <UserTable
+      </div>      <UserTable
+        :items="userStore.items"
         :search="searchQuery"
         @view-user="handleViewUser"
         @edit-user="handleEditUser"

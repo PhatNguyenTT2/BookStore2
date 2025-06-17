@@ -36,28 +36,16 @@ const switchToOTP = () => currentMode.value = 'otp'
 const switchToResetPassword = () => currentMode.value = 'reset'
 
 // Form handlers
-const handleSignIn = async (data) => {
-  console.log('Starting login with data:', data) // Debug log
+const handleSignIn = async (data) => {  console.log('Starting login with data:', data) // Debug log
 
   try {
     loading.value = true
     error.value = null
 
-    // QUICK OFFLINE CHECK: Nếu là admin/admin123, skip API call
-    if (data.username === 'admin' && data.password === 'admin123') {
-      console.log('Using direct offline demo mode')
-      localStorage.setItem('token', 'demo-offline-token')
-      setTimeout(() => {
-        router.push('/books')
-        loading.value = false
-      }, 100) // Delay nhỏ để UI smooth
-      return
-    }
-
-    console.log('Sending request to:', 'http://localhost:8080/bookstore/auth/token') // Debug log
+    console.log('Sending request to:', 'http://localhost:8080/api/auth/token') // Debug log
 
     // Tạo axios instance với timeout ngắn
-    const response = await axios.post('http://localhost:8080/bookstore/auth/token', {
+    const response = await axios.post('http://localhost:8080/api/auth/token', {
       username: data.username,
       password: data.password
     }, {
@@ -128,19 +116,9 @@ const handleSignIn = async (data) => {
         alert('Sai tên đăng nhập hoặc mật khẩu')
       }
     } else if (e.request) {
-      // Request được gửi nhưng không có response (lỗi network thật)
-      console.error('No response received:', e.request)
-
-      // OFFLINE MODE: Allow demo login when server is down
-      if (data.username === 'admin' && data.password === 'admin123') {
-        console.log('Using offline demo mode')
-        localStorage.setItem('token', 'demo-offline-token')
-        router.push('/books')
-        return
-      }
-
-      error.value = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại. (Hoặc dùng admin/admin123 cho demo offline)'
-      alert('Lỗi kết nối mạng. Thử demo: admin/admin123')
+      // Request được gửi nhưng không có response (lỗi network thật)      console.error('No response received:', e.request)
+      error.value = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối và thử lại.'
+      alert('Không thể kết nối đến server. Vui lòng kiểm tra kết nối.')
     } else {
       // other
       console.error('Request setup error:', e.message)
@@ -173,10 +151,10 @@ const handleSignUp = async (data) => {
       return
     }
 
-    // Validate password length (min 8 characters)
-    if (data.password.length < 8) {
-      error.value = 'Mật khẩu phải có ít nhất 8 ký tự'
-      alert('Mật khẩu phải có ít nhất 8 ký tự')
+    // Validate password length (min 6 characters)
+    if (data.password.length < 6) {
+      error.value = 'Mật khẩu phải có ít nhất 6 ký tự'
+      alert('Mật khẩu phải có ít nhất 6 ký tự')
       return
     }
 
@@ -186,11 +164,9 @@ const handleSignUp = async (data) => {
       error.value = 'Email không hợp lệ'
       alert('Email không hợp lệ')
       return
-    }
+    }    console.log('Sending registration request to:', 'http://localhost:8080/api/users') // Debug log
 
-    console.log('Sending registration request to:', 'http://localhost:8080/bookstore/users') // Debug log
-
-    const response = await axios.post('http://localhost:8080/bookstore/users', {
+    const response = await axios.post('http://localhost:8080/api/users', {
       username: data.username,
       password: data.password,
       firstName: data.firstName,

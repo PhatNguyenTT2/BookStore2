@@ -66,32 +66,36 @@ const headers = computed(() => {
 
 </script>
 
-<template>
-  <v-container fluid>
-    <v-data-table :headers="headers" :items="book.items" class="elevation-1" item-value="id" :items-per-page="-1"
-    @click:row="onRowClick"
-      hide-default-footer>
+<template>  <v-container fluid>
+    <v-data-table 
+      :headers="headers" 
+      :items="props.items" 
+      class="elevation-1" 
+      item-value="id" 
+      :items-per-page="10"
+      fixed-header
+      @click:row="onRowClick"
+    >
       <template v-if="props.showActions" #item.action="{ item }">
         <div class="action-icons">
           <v-tooltip text="View" location="top">
-            <template #activator="{ props }">
-              <div v-bind="props" @click="$emit('view-book', book.fullBookDetails[item.id])" style="cursor: pointer;">
+            <template #activator="{ props: tooltipProps }">
+              <div v-bind="tooltipProps" @click="$emit('view-book', props.fullBookDetails[item.id])" style="cursor: pointer;">
                 <ViewIcon />
               </div>
             </template>
           </v-tooltip>
 
           <v-tooltip text="Edit" location="top">
-            <template #activator="{ props }">
-              <div v-bind="props" @click="$emit('edit-book', book.fullBookDetails[item.id])" style="cursor: pointer;">
+            <template #activator="{ props: tooltipProps }">
+              <div v-bind="tooltipProps" @click="$emit('edit-book', props.fullBookDetails[item.id])" style="cursor: pointer;">
                 <EditIcon />
               </div>
             </template>
-          </v-tooltip>
-
+          </v-tooltip>          
           <v-tooltip text="Delete" location="top">
-            <template #activator="{ props }">
-              <div v-bind="props" @click="openDeleteDialog(item)" style="cursor: pointer;">
+            <template #activator="{ props: tooltipProps }">
+              <div v-bind="tooltipProps" @click="openDeleteDialog(item)" style="cursor: pointer;">
                 <DeleteIcon />
               </div>
             </template>
@@ -100,7 +104,7 @@ const headers = computed(() => {
       </template>
 
       <template #item.categories="{ item }">
-        <span>{{ book.fullBookDetails[item.id]?.categories.join(', ') }}</span>
+        <span>{{ props.fullBookDetails[item.id]?.categories?.join(', ') || item.type }}</span>
       </template>
     </v-data-table>
 

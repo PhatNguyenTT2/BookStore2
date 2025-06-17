@@ -1,76 +1,76 @@
 // stores/bookStore.js
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
+import { bookAPI } from '@/services/api'
 
 export const useBook = defineStore('book', () => {
-  const items = ref([
-  {
-    id: '1',
-    title: 'Hibernate Core -11th1',
-    type: 'Educational',
-    import_price: '100000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-  },
-  {
-    id: '2',
-    title: 'Hibernate Core -11th2',
-    type: 'Educational',
-    import_price: '1000000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-  },
-  {
-    id: '3',
-    title: 'Hibernate Core -11th3',
-    type: 'Educational',
-    import_price: '10000000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-  },
-  ])
+  const items = ref([])
+  const loading = ref(false)
+  const error = ref(null)
+  const fullBookDetails = reactive({})
 
-  const fullBookDetails = reactive({
-  '1': {
-    id: '1',
-    title: 'Hibernate Core -11th1',
-    type: 'Educational',
-    import_price: '100000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-    categories: ['Java'],
-    description: 'A comprehensive guide to Hibernate for 11th edition',
-    publisher: 'TechPress'
-  },
-  '2': {
-    id: '2',
-    title: 'Hibernate Core -11th2',
-    type: 'Educational',
-    import_price: '1000000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-    categories: ['Java', 'ORM'],
-    description: 'A comprehensive guide to Hibernate for 11th edition',
-    publisher: 'TechPress'
-  },
-  '3': {
-    id: '3',
-    title: 'Hibernate Core -11th3',
-    type: 'Educational',
-    import_price: '10000000',
-    author: 'Hibernate',
-    quantity: '100',
-    published_year: '2025',
-    categories: ['Java', 'ORM', 'Backend'],
-    description: 'A comprehensive guide to Hibernate for 11th edition',
-    publisher: 'TechPress'
-  },
-  })
+  // Fetch books from API
+  const fetchBooks = async () => {
+    try {
+      loading.value = true
+      error.value = null
+
+      // Fetch from real API
+      const response = await bookAPI.getAll()
+      if (response.data.code === 1000) {
+        const books = response.data.result
+        items.value = books.map(book => ({
+          id: book.id,
+          title: book.title,
+          type: book.category || 'Unknown',
+          import_price: book.price ? book.price.toString() : '0',
+          author: book.author,
+          quantity: book.totalCopies ? book.totalCopies.toString() : '0',
+          published_year: book.publishYear ? book.publishYear.toString() : 'Unknown',
+          isbn: book.isbn,
+          publisher: book.publisher,
+          description: book.description,
+          available_copies: book.availableCopies ? book.availableCopies.toString() : '0'
+        }))
+
+        // Set full details for each book
+        books.forEach(book => {
+          fullBookDetails[book.id] = {
+            id: book.id,
+            title: book.title,
+            type: book.category || 'Unknown',
+            import_price: book.price ? book.price.toString() : '0',
+            author: book.author,
+            quantity: book.totalCopies ? book.totalCopies.toString() : '0',
+            published_year: book.publishYear ? book.publishYear.toString() : 'Unknown',
+            categories: book.category ? [book.category] : ['Unknown'],
+            description: book.description || 'No description provided',
+            publisher: book.publisher || 'Unknown',
+            isbn: book.isbn || 'Unknown',
+            available_copies: book.availableCopies ? book.availableCopies.toString() : '0'
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching books:', err)
+      error.value = 'Failed to fetch books'
+
+      // Fallback to demo data if API fails
+      items.value = [
+        {
+          id: '1',
+          title: 'Spring Boot Programming (Demo)',
+          type: 'Technology',
+          import_price: '250000',
+          author: 'John Doe',
+          quantity: '50',
+          published_year: '2024',
+        }
+      ]
+    } finally {
+      loading.value = false
+    }
+  }
 
   const searchQuery = ref('')
   const filteredBooks = computed(() => {
@@ -79,37 +79,84 @@ export const useBook = defineStore('book', () => {
       book.id.toLowerCase().includes(q) ||
       book.title.toLowerCase().includes(q)
     )
-  })
+  }) // Thêm dấu đóng ngoặc và dấu phẩy
 
-  const addBook = (newBook) => {
-    const newId = String(items.value.length + 1)
-    const newBookWithId = { ...newBook, id: newId }
-    newBookWithId.categories = Array.isArray(newBook.categories)
-      ? newBook.categories
-      : newBook.categories.split(', ').map(c => c.trim())
+  const addBook = async (newBook) => {
+    try {
+      loading.value = true
 
-    items.value.push(newBookWithId)
-    fullBookDetails[newId] = {
-      ...newBookWithId,
-      description: 'No description provided',
-      publisher: 'Unknown'
+      // Real API call
+      const bookData = {
+        title: newBook.title,
+        author: newBook.author,
+        isbn: newBook.isbn || null,
+        publisher: newBook.publisher || null,
+        publishYear: newBook.published_year ? parseInt(newBook.published_year) : null,
+        category: newBook.type,
+        price: newBook.import_price ? parseFloat(newBook.import_price) : null,
+        totalCopies: newBook.quantity ? parseInt(newBook.quantity) : null,
+        description: newBook.description || null
+      }
+
+      const response = await bookAPI.create(bookData)
+      if (response.data.code === 1000) {
+        // Refresh books list
+        await fetchBooks()
+      }
+    } catch (err) {
+      console.error('Error adding book:', err)
+      error.value = 'Failed to add book'
+    } finally {
+      loading.value = false
     }
   }
 
-  const updateBook = (updatedBook) => {
-    const index = items.value.findIndex(b => b.id === updatedBook.id)
-    if (index !== -1) {
-      items.value[index] = { ...updatedBook }
-    }
-    if (fullBookDetails[updatedBook.id]) {
-      fullBookDetails[updatedBook.id] = { ...updatedBook }
+  const updateBook = async (updatedBook) => {
+    try {
+      loading.value = true
+
+      // Real API call
+      const bookData = {
+        title: updatedBook.title,
+        author: updatedBook.author,
+        isbn: updatedBook.isbn || null,
+        publisher: updatedBook.publisher || null,
+        publishYear: updatedBook.published_year ? parseInt(updatedBook.published_year) : null,
+        category: updatedBook.type,
+        price: updatedBook.import_price ? parseFloat(updatedBook.import_price) : null,
+        totalCopies: updatedBook.quantity ? parseInt(updatedBook.quantity) : null,
+        description: updatedBook.description || null
+      }
+
+      const response = await bookAPI.update(updatedBook.id, bookData)
+      if (response.data.code === 1000) {
+        // Refresh books list
+        await fetchBooks()
+      }
+    } catch (err) {
+      console.error('Error updating book:', err)
+      error.value = 'Failed to update book'
+    } finally {
+      loading.value = false
     }
   }
 
-  const deleteBook = (book) => {
-items.value = items.value.filter(b => b.id !== book.id)
-delete fullBookDetails[book.id]
+  const deleteBook = async (book) => {
+    try {
+      loading.value = true
 
+      // Real API call
+      const response = await bookAPI.delete(book.id)
+      if (response.data.code === 1000) {
+        // Refresh books list
+        await fetchBooks()
+      }
+    } catch (err) {
+      console.error('Error deleting book:', err)
+      error.value = 'Failed to delete book'
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
@@ -117,6 +164,9 @@ delete fullBookDetails[book.id]
     fullBookDetails,
     searchQuery,
     filteredBooks,
+    loading,
+    error,
+    fetchBooks,
     addBook,
     updateBook,
     deleteBook

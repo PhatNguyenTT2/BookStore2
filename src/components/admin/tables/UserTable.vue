@@ -1,14 +1,34 @@
 <script setup>
-import { ref } from 'vue'
-import { useUser } from '@/data/user'
+import { ref, computed } from 'vue'
 import ViewIcon from '@/assets/icons-vue/receipt.vue'
 import EditIcon from '@/assets/icons-vue/edit.vue'
 import DeleteIcon from '@/assets/icons-vue/trash.vue'
 
-const userStore = useUser()
-const { users } = userStore
+const props = defineProps({
+  items: {
+    type: Array,
+    default: () => []
+  },
+  search: {
+    type: String,
+    default: ''
+  }
+})
 
 const emit = defineEmits(['view-user', 'edit-user', 'delete-user'])
+
+// Filter users based on search query
+const filteredUsers = computed(() => {
+  if (!props.search) return props.items
+  
+  const searchLower = props.search.toLowerCase()
+  return props.items.filter(user => 
+    user.name?.toLowerCase().includes(searchLower) ||
+    user.email?.toLowerCase().includes(searchLower) ||
+    user.username?.toLowerCase().includes(searchLower) ||
+    user.role?.toLowerCase().includes(searchLower)
+  )
+})
 
 const headers = [
   { title: 'ID', key: 'id' },
@@ -29,7 +49,6 @@ const openDeleteDialog = (user) => {
 
 const confirmDelete = () => {
   if (userToDelete.value) {
-    userStore.deleteUser(userToDelete.value)
     emit('delete-user', userToDelete.value)
     dialog.value = false
     userToDelete.value = null
@@ -38,14 +57,13 @@ const confirmDelete = () => {
 </script>
 
 <template>
-  <v-container fluid>
-    <v-data-table
+  <v-container fluid>    <v-data-table
       :headers="headers"
-      :items="users"
+      :items="filteredUsers"
       class="elevation-1"
       item-value="id"
-      :items-per-page="-1"
-      hide-default-footer
+      :items-per-page="10"
+      fixed-header
     >
       <template #item.action="{ item }">
         <div class="action-icons">
