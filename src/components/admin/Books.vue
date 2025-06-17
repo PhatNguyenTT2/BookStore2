@@ -20,12 +20,11 @@ onMounted(() => {
 })
 
 const searchQuery = ref('')
+
+// Use search function from book store
 const filteredBooks = computed(() => {
-  const q = searchQuery.value.toLowerCase()
-  return book.items.filter(book =>
-    book.id.toLowerCase().includes(q) ||
-    book.title.toLowerCase().includes(q)
-  )
+  if (!searchQuery.value) return book.items
+  return book.searchBooks(searchQuery.value)
 })
 
 const selectedBook = ref(null)
@@ -79,10 +78,13 @@ const closeEdit = () => {
         <div class="right">
           <SearchFrame v-model="searchQuery" />
         </div>
-      </div>
-
-      <BookTable :items="filteredBooks" :fullBookDetails="book.fullBookDetails" @view-book="handleViewBook"
-        @edit-book="handleEditBook" @delete-book="deleteBook" />
+      </div>      <BookTable 
+        :items="filteredBooks" 
+        :fullBookDetails="book.fullBookDetails" 
+        @view-book="handleViewBook"
+        @edit-book="handleEditBook" 
+        @delete-book="deleteBook" 
+      />
 
       <ButtonCRUD @click="handleAddBook">
         <template #btn-text>

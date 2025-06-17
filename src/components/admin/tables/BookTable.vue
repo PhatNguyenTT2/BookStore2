@@ -1,15 +1,19 @@
 <script setup>
 import { ref } from 'vue'
-import { computed } from 'vue'
-import { useBook } from '@/data/book' 
 
 import ViewIcon from '@/assets/icons-vue/receipt.vue'
 import EditIcon from '@/assets/icons-vue/edit.vue'
 import DeleteIcon from '@/assets/icons-vue/trash.vue'
 
-const book = useBook()
-
 const props = defineProps({
+  items: {
+    type: Array,
+    default: () => []
+  },
+  fullBookDetails: {
+    type: Object,
+    default: () => ({})
+  },
   showActions: {
     type: Boolean,
     default: true
@@ -27,7 +31,7 @@ const props = defineProps({
 const emit = defineEmits(['view-book', 'edit-book', 'delete-book', 'select-book'])
 
 const onRowClick = (bookRow) => {
-  const selected = book.fullBookDetails[bookRow.id]
+  const selected = props.fullBookDetails[bookRow.id]
   emit('select-book', selected)
 }
 

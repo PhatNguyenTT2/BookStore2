@@ -83,20 +83,19 @@ export const useBook = defineStore('book', () => {
 
   const addBook = async (newBook) => {
     try {
-      loading.value = true
-
-      // Real API call
-      const bookData = {
-        title: newBook.title,
-        author: newBook.author,
-        isbn: newBook.isbn || null,
-        publisher: newBook.publisher || null,
-        publishYear: newBook.published_year ? parseInt(newBook.published_year) : null,
-        category: newBook.type,
-        price: newBook.import_price ? parseFloat(newBook.import_price) : null,
-        totalCopies: newBook.quantity ? parseInt(newBook.quantity) : null,
-        description: newBook.description || null
-      }
+      loading.value = true        // Real API call
+        const bookData = {
+          title: newBook.title,
+          author: newBook.author,
+          isbn: newBook.isbn || null,
+          publisher: newBook.publisher || null,
+          publishYear: newBook.published_year ? parseInt(newBook.published_year) : null,
+          category: newBook.type,
+          price: newBook.import_price ? parseFloat(newBook.import_price) : null,
+          totalCopies: newBook.quantity ? parseInt(newBook.quantity) : null,
+          availableCopies: newBook.quantity ? parseInt(newBook.quantity) : null,
+          description: newBook.description || null
+        }
 
       const response = await bookAPI.create(bookData)
       if (response.data.code === 1000) {
@@ -113,9 +112,7 @@ export const useBook = defineStore('book', () => {
 
   const updateBook = async (updatedBook) => {
     try {
-      loading.value = true
-
-      // Real API call
+      loading.value = true      // Real API call
       const bookData = {
         title: updatedBook.title,
         author: updatedBook.author,
@@ -125,6 +122,7 @@ export const useBook = defineStore('book', () => {
         category: updatedBook.type,
         price: updatedBook.import_price ? parseFloat(updatedBook.import_price) : null,
         totalCopies: updatedBook.quantity ? parseInt(updatedBook.quantity) : null,
+        availableCopies: updatedBook.available_copies ? parseInt(updatedBook.available_copies) : null,
         description: updatedBook.description || null
       }
 
@@ -158,12 +156,23 @@ export const useBook = defineStore('book', () => {
       loading.value = false
     }
   }
+  const searchBooks = (query) => {
+    if (!query) return items.value
+    const q = query.toLowerCase()
+    return items.value.filter(book =>
+      book.id.toLowerCase().includes(q) ||
+      book.title.toLowerCase().includes(q) ||
+      book.author.toLowerCase().includes(q) ||
+      book.type.toLowerCase().includes(q)
+    )
+  }
 
   return {
     items,
     fullBookDetails,
     searchQuery,
     filteredBooks,
+    searchBooks,
     loading,
     error,
     fetchBooks,
